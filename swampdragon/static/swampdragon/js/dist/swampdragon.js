@@ -55,7 +55,6 @@ module.exports = {
 require('sockjs'); // browserify shim
 
 var eventHandler = require('./event-handler'),
-    messagehandler = require('./message-handler'),
     channels = require('./channels'),
     connection = {},
     isReady = false,
@@ -86,7 +85,7 @@ function connect () {
 
 
 function onopen () {
-    connectionAttempt = 0;
+    connectionAttempts = 0;
     isReady = true;
     eventHandler.emit('open');
     eventHandler.emitOnce('ready');
@@ -96,7 +95,7 @@ function onopen () {
 function onclose (data) {
     connection.socket = null;
     isReady = false;
-    if (connectionAttempt === 0) {
+    if (connectionAttempts === 0) {
         eventHandler.emit('close');
     }
 
@@ -107,12 +106,13 @@ function onclose (data) {
     }
 
     setTimeout(function() {
-        if (connectionAttempt < 10) {
-            connectionAttempt++;
+        if (connectionAttempts < 10) {
+            connectionAttempts++;
             connect();
         }
-    }, (connectionAttempt * 500) + 100);
+    }, (connectionAttempts * 500) + 100);
 }
+
 
 function onmessage (e) {
     if ('data' in e) {
@@ -173,7 +173,7 @@ module.exports = {
     on: eventHandler.on
 };
 
-},{"./channels":1,"./event-handler":3,"./message-handler":4,"sockjs":6}],3:[function(require,module,exports){
+},{"./channels":1,"./event-handler":3,"sockjs":5}],3:[function(require,module,exports){
 var callbackQueue = {};
 callbackId = 0;
 
@@ -219,65 +219,6 @@ module.exports = {
 };
 
 },{}],4:[function(require,module,exports){
-var messageHandler = function (e) {
-    if ('data' in e) {
-        if ((typeof e.data != "object")) {
-            e['data'] = JSON.parse(e['data']);
-        }
-    }
-
-    /*******************
-     * Callback
-     *******************/
-    if ('data' in e && 'context' in e.data && 'client_callback_name' in e.data.context) {
-        swampDragon.emit(e.data.context.client_callback_name, [e.data.context, e.data.data]);
-    }
-
-    /*******************
-     * Channel setup
-     *******************/
-    if ('channel_data' in e.data) {
-        var channel_setup = e.data.channel_data;
-        for (i in channel_setup.remote_channels) {
-            remote_chan = channel_setup.remote_channels[i];
-            if (!(remote_chan in swampDragon.channels)) {
-                swampDragon.channels[remote_chan] = []
-            }
-            if (!(channel_setup.local_channel in swampDragon.channels[remote_chan])) {
-                swampDragon.channels[remote_chan].push(channel_setup.local_channel);
-            }
-        }
-
-        if (!(channel_setup.local_channel in swampDragon.channels)) {
-            swampDragon.channels[channel_setup.remote_channel] = channel_setup.local_channel;
-        }
-    }
-
-    /*******************
-     * Channel message
-     *******************/
-    if ('channel' in e.data) {
-        var channel = swampDragon.channels[e.data.channel];
-        delete(e.data['channel']);
-        swampDragon.settings.onchannelmessage(channel, e.data);
-        return;
-    }
-
-    /*******************
-     * Heartbeat
-     *******************/
-    if ('data' in e && 'heartbeat' in e['data']) {
-        if (e.data.heartbeat == 1) {
-            swampDragon.send(JSON.stringify(e.data));
-            swampDragon.settings.onheartbeat();
-        }
-    }
-    settings.onmessage(e);
-};
-
-module.exports  = messageHandler;
-
-},{}],5:[function(require,module,exports){
 /*
  * SwampDraon connection wrapper around SocketJS
  * By Jonas Hagstedt, 2014
@@ -411,9 +352,9 @@ swampdragon["delete"] = function (route, data, success, failure) {
 
 module.exports = swampdragon;
 
-},{"./connection":2,"./event-handler":3}],6:[function(require,module,exports){
+},{"./connection":2,"./event-handler":3}],5:[function(require,module,exports){
 (function (global){
-;__browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
+; var __browserify_shim_require__=require;(function browserifyShim(module, exports, require, define, browserify_shim__define__module__export__) {
 /* SockJS client, version 0.3.4, http://sockjs.org, MIT License
 
 Copyright (c) 2011-2012 VMware, Inc.
@@ -2798,5 +2739,5 @@ if (typeof define === 'function' && define.amd) {
 }).call(global, undefined, undefined, undefined, undefined, function defineExport(ex) { module.exports = ex; });
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[5])(5)
+},{}]},{},[4])(4)
 });
